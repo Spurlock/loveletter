@@ -49,7 +49,7 @@ class Player(object):
     def play_turn(self, player_hand, public_game_state, game_history):
         pass
 
-    def learn(player_idx, hand):
+    def learn(player_idx, hand, turn_idx):
         pass
 
 
@@ -170,7 +170,7 @@ def play_game():
                 game_state.eliminate_player(target)
 
         elif played_card == PRIEST:
-            PLAYERS[current_player_idx].learn(target, game_state.player_states[target].hand)
+            PLAYERS[current_player_idx].learn(target, game_state.player_states[target].hand, len(game_state.history))
 
         elif played_card == BARON:
             my_card = current_player_state.hand[0]
