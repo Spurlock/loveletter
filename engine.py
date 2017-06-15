@@ -71,7 +71,10 @@ class GameState(object):
         card = self.deck.pop(0)
         self.player_states[player_idx]['hand'].append(card)
 
-    def eliminate_player(self, player_idx):
+    def eliminate_player(self, player_idx, reason=None):
+        print "Eliminating player %d" % player_idx
+        if reason:
+            print "Reason: %s" % reason
         self.turn_record['eliminated_player'] = player_idx
 
         player_state = self.player_states[player_idx]
@@ -155,9 +158,7 @@ def play_game():
         try:
             current_player_state.hand.remove(played_card)
         except ValueError as err:
-            print err
-            print "Player %d tried to play a card not in hand. Killing player." % current_player_idx
-            game_state.eliminate_player(current_player_idx)
+            game_state.eliminate_player(current_player_idx, "played unavailable card")
             # TO DO : check for winner?
             continue
 
@@ -167,7 +168,7 @@ def play_game():
             # TO DO: validate that target and guess are provided and valid
             if guess in game_state.player_states[target].hand:
                 # hit
-                game_state.eliminate_player(target)
+                game_state.eliminate_player(target, "guessed by guard")
 
         elif played_card == PRIEST:
             PLAYERS[current_player_idx].learn(target, game_state.player_states[target].hand, len(game_state.history))
@@ -180,10 +181,30 @@ def play_game():
                 pass
             else:
                 loser = target if my_card > their_card else current_player_idx
-                game_state.eliminate_player(loser)
+                game_state.eliminate_player(loser, "outranked in baron-off")
 
         elif played_card == HANDMAID:
             current_player_state.handmaided = True
+
+        elif played_card == PRINCE:
+            discarded = game_state.player_states[target].hand[0]
+            if discarded == PRINCESS:
+                game_state.eliminate_player(target, "discarded princess")
+            else:
+                game_state.deal_card(target)
+
+        elif played_card == KING:
+            my_card = current_player_state.hand.pop()
+            current_player_state.hand.append(game_state.player_states[target].hand.pop())
+            game_state.player_states[target].hand.append(my_card)
+
+        elif played_card == COUNTESS:
+            pass
+
+        elif played_card == PRINCESS:
+            game_state.eliminate_player(current_player_idx, "played princess")
+
+            
 
 
 play_game()
