@@ -32,6 +32,7 @@ loop until game winner:
 
 from random import shuffle
 from copy import copy
+from sys import exit
 
 GUARD = 1
 PRIEST = 2
@@ -49,7 +50,7 @@ class Player(object):
     def play_turn(self, player_hand, public_game_state, game_history):
         pass
 
-    def learn(player_idx, hand, turn_idx):
+    def learn(self, player_idx, hand, turn_idx):
         pass
 
 
@@ -81,6 +82,32 @@ class GameState(object):
         player_state.is_alive = False
         player_state.graveyard.extend(player_state.hand)
         player_state.hand = []
+
+    def get_winner(self):
+        remaining_players = [idx for idx, player_state in enumerate(self.player_states) if player_state.is_alive]
+        if len(remaining_players) == 0:
+            exit("Everyone was eliminated. This is not supposed to happen.")
+        
+        elif len(remaining_players) == 1:
+            return remaining_players[0]
+        
+        elif len(self.deck < 2):
+            player_states = {player_idx: self.player_states[player_idx] for player_idx in remaining_players}
+            high_card = max([player_state.hand[0] for player_state in player_states])
+            top_players = [player_idx for player_idx, player_state in player_states.iteritems() if player_state.hand[0] == high_card]
+        
+            if len(top_players) == 1:
+                return top_players[0]
+            else:
+                winning_player = None
+                max_graveyard_score = -1
+                for player_idx in top_players:
+                    graveyard_score = sum(player_states[player_idx].graveyard)
+                    if graveyard_score > max_graveyard_score:
+                        winning_player = player_idx
+                        max_graveyard_score = graveyard_score
+                return winning_player
+        return None
 
 
 class PublicGameState(object):
@@ -157,9 +184,9 @@ def play_game():
 
         try:
             current_player_state.hand.remove(played_card)
-        except ValueError as err:
+        except ValueError:
             game_state.eliminate_player(current_player_idx, "played unavailable card")
-            # TO DO : check for winner?
+            winner = game_state.get_winner()
             continue
 
         current_player_state.graveyard.append(played_card)
@@ -204,8 +231,8 @@ def play_game():
         elif played_card == PRINCESS:
             game_state.eliminate_player(current_player_idx, "played princess")
 
-            
-
+        # check for winner
+        winner = game_state.get_winner()
 
 play_game()
 
