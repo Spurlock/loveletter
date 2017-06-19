@@ -32,7 +32,7 @@ loop until game winner:
 
 from random import shuffle
 from copy import copy
-from sys import exit
+import sys
 
 GUARD = 1
 PRIEST = 2
@@ -43,6 +43,15 @@ KING = 6
 COUNTESS = 7
 PRINCESS = 8
 SUICIDE = 9
+
+FULL_DECK = [
+    1, 1, 1, 1, 1,
+    2, 2,
+    3, 3,
+    4, 4,
+    5, 5,
+    6, 7, 8
+]
 
 class Player(object):
     def __init__(self):
@@ -93,7 +102,7 @@ class GameState(object):
     def get_winner(self):
         remaining_players = [idx for idx, player_state in enumerate(self.player_states) if player_state.is_alive]
         if len(remaining_players) == 0:
-            exit("Everyone was eliminated. This is not supposed to happen.")
+            sys.exit("Everyone was eliminated. This is not supposed to happen.")
         
         elif len(remaining_players) == 1:
             return remaining_players[0]
@@ -173,6 +182,9 @@ class GameState(object):
             if not target_is_valid() and target != self.current_player_idx:
                 return False
 
+        if played_card in [PRINCE, KING] and COUNTESS in current_player_state.hand:
+            return False
+
 
 class PublicGameState(object):
     def __init__(self, game_state):
@@ -197,16 +209,6 @@ class PublicPlayerState(object):
         self.is_alive = player_state.is_alive
         self.affection_tokens = player_state.affection_tokens
         self.handmaided = player_state.handmaided
-
-
-FULL_DECK = [
-    1, 1, 1, 1, 1,
-    2, 2,
-    3, 3,
-    4, 4,
-    5, 5,
-    6, 7, 8
-]
 
 PLAYERS = [Player() for _ in xrange(4)]
 
