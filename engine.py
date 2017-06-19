@@ -3,25 +3,19 @@ NOTES AND DEFINITIONS
 
 deck = [CARD_RANK, CARD_RANK, ..., CARD_RANK] # burner is not separate, is just the last card
 
-move = {
+player_action = {
     card: CARD_RANK, 
     ?target_player: player_idx, 
-    ?target_card: CARD_RANK
+    ?guess: CARD_RANK
 }
 
 game_history = [
   {
     player: INT,
-    move,
+    player_action,
     ?eliminated_player: INT
   }
 ]
-
-
-
-create deck
-shuffle
-deal //random starter for first round?
 
 loop until game winner:
   loop until round winner:
@@ -30,7 +24,7 @@ loop until game winner:
     compute move results, update game_state and game_history
 """
 
-from random import shuffle
+from random import shuffle, randint
 from copy import copy
 import sys
 
@@ -54,7 +48,7 @@ FULL_DECK = [
 ]
 
 class Player(object):
-    def __init__(self):
+    def __init__(self, my_idx):
         pass
 
     def play_turn(self, player_hand, public_game_state, game_history):
@@ -67,8 +61,8 @@ class Player(object):
 class GameState(object):
     def __init__(self, players):
         player_states = []
-        for _ in players:
-            player_states.append(PlayerState())
+        for player_idx, _ in enumerate(players):
+            player_states.append(PlayerState(player_idx))
 
         game_deck = [card for card in FULL_DECK]
         shuffle(game_deck)
@@ -77,11 +71,20 @@ class GameState(object):
         self.player_states = player_states
         self.history = []
         self.turn_record = None
-        self.current_player_idx = 0  # TO DO: respect last winner
+        self.current_player_idx = -1  # TO DO: respect last winner
+
+    def __str__(self):
+        players = "\r\n".join([player.short_description() for player in self.player_states])
+        return """
+GAME STATE:
+%s
+deck: %r,
+current player idx: %d
+        """ % (players, self.deck, self.current_player_idx)
 
     def deal_card(self, player_idx):
         card = self.deck.pop(0)
-        self.player_states[player_idx]['hand'].append(card)
+        self.player_states[player_idx].hand.append(card)
 
     def advance_current_player(self):
         self.current_player_idx = (self.current_player_idx + 1) % len(PLAYERS)
@@ -107,9 +110,9 @@ class GameState(object):
         elif len(remaining_players) == 1:
             return remaining_players[0]
         
-        elif len(self.deck < 2):
+        elif len(self.deck) < 2:
             player_states = {player_idx: self.player_states[player_idx] for player_idx in remaining_players}
-            high_card = max([player_state.hand[0] for player_state in player_states])
+            high_card = max([player_state.hand[0] for _, player_state in player_states.iteritems()])
             top_players = [player_idx for player_idx, player_state in player_states.iteritems() if player_state.hand[0] == high_card]
         
             if len(top_players) == 1:
@@ -139,14 +142,16 @@ class GameState(object):
         available_targets = self.get_available_targets()
 
         if played_card != GUARD:
-            player_action['target_card'] = None
+            player_action['guess'] = None
         if target is not None:
             if played_card not in [GUARD, PRIEST, BARON, PRINCE, KING]:
                 target = None
         if len(available_targets) == 0 and played_card != PRINCE:
             player_action['target_player'] = None
 
-    def player_action_is_valid(self, player_action):
+        return player_action
+
+    def get_action_error(self, player_action):
 
         def target_is_valid():
             available_targets = self.get_available_targets()
@@ -162,28 +167,30 @@ class GameState(object):
 
         played_card = player_action['card']
         target = player_action.get('target_player')
-        guess = player_action.get('target_card')
+        guess = player_action.get('guess')
 
         # is choice of card valid?
         if played_card not in current_player_state.hand:
-            return False
+            return "played card not in hand"
 
         if played_card == GUARD:
             if not target_is_valid():
-                return False
-            if not isinstance(guess, int) or guess < 2 or guess > 7:
-                return False
+                return "invalid guard target"
+            if not isinstance(guess, int) or guess < 2 or guess > 8:
+                return "invalid guard guess"
 
         elif played_card in [PRIEST, BARON, KING]:
             if not target_is_valid():
-                return False
+                return "invalid baron target"
 
         elif played_card == PRINCE:
             if not target_is_valid() and target != self.current_player_idx:
-                return False
+                return "invalid prince target"
 
         if played_card in [PRINCE, KING] and COUNTESS in current_player_state.hand:
-            return False
+            return "countess cheating"
+
+        return None
 
 
 class PublicGameState(object):
@@ -195,12 +202,28 @@ class PublicGameState(object):
 
 
 class PlayerState(object):
-    def __init__(self):
+    def __init__(self, idx):
+        self.my_idx = idx
         self.graveyard = []
-        self.is_alive = True,
+        self.is_alive = True
         self.affection_tokens = 0
         self.hand = []
         self.handmaided = False
+
+    def __str__(self):
+        return """
+PLAYER %d
+hand: %r
+is_alive: %r
+handmaided: %r
+affection: %d
+graveyard: %r
+        """ % (self.my_idx, self.hand, self.is_alive, self. handmaided, self.affection_tokens, self.graveyard)
+
+    def short_description(self):
+        alive = "alive" if self.is_alive else "dead"
+        handmaided = "handmaided, " if self.handmaided else ""
+        return "P%d: %s, %s%r" % (self.my_idx, alive, handmaided, self.hand)
 
 
 class PublicPlayerState(object):
@@ -210,7 +233,37 @@ class PublicPlayerState(object):
         self.affection_tokens = player_state.affection_tokens
         self.handmaided = player_state.handmaided
 
-PLAYERS = [Player() for _ in xrange(4)]
+
+class IdiotBot(Player):
+    def __init__(self, my_idx):
+        Player.__init__(self, my_idx)
+        self.my_idx = my_idx
+
+    def play_turn(self, player_hand, public_game_state):
+        card = min(player_hand)
+        target = None
+        guess = None
+
+        if card in [PRIEST, BARON, PRINCE, KING, GUARD]:
+            for p_idx, player_state in enumerate(public_game_state.player_states):
+                if p_idx != self.my_idx and player_state.is_alive and not player_state.handmaided:
+                    target = p_idx
+                    break
+            
+        if card == GUARD:
+            guess = randint(2, 8)
+
+        return {
+            'card': card,
+            'target_player': target,
+            'guess': guess
+        }
+
+
+    def learn(self, player_idx, hand, turn_idx):
+        pass
+
+PLAYERS = [IdiotBot(idx) for idx in xrange(4)]
 
 def play_game():
 
@@ -231,28 +284,34 @@ def play_game():
 
         # every turn housekeeping
         current_player_state.handmaided = False
+        game_state.turn_record = {}
 
         game_state.deal_card(current_player_idx)
         public_game_state = PublicGameState(game_state)
 
+        print game_state
+
         player_action = current_player.play_turn(current_player_state.hand, public_game_state)
         player_action = game_state.sanitize_action(player_action)
-        is_valid_action = game_state.player_action_is_valid(player_action)
+        print
+        print "ACTION: %r" % player_action
+        print
+        action_error = game_state.get_action_error(player_action)
 
-        if not is_valid_action:
-            game_state.eliminate_player(current_player_idx, "illegal action")
+        if action_error is not None:
+            game_state.eliminate_player(current_player_idx, action_error)
             game_state.turn_record = {
                 'player_idx': current_player_idx,
-                'action': {'card': SUICIDE},  # TO DO: some indication that the player exploded
+                'action': {'card': SUICIDE},
                 'eliminated_player': current_player_idx
             }
 
         else:  # valid move, carry on
             played_card = player_action['card']
             target = player_action.get('target_player')
-            guess = player_action.get('target_card')
+            guess = player_action.get('guess')
 
-            target_player_state = game_state.player_states[target] if target else None
+            target_player_state = game_state.player_states[target] if target is not None else None
 
             game_state.turn_record = {
                 'player_idx': current_player_idx,
@@ -264,19 +323,22 @@ def play_game():
             current_player_state.graveyard.append(played_card)
 
             if played_card == GUARD:
-                if guess in target_player_state.hand:
-                    game_state.eliminate_player(target, "guessed by guard")
+                if target is not None:
+                    if guess in target_player_state.hand:
+                        game_state.eliminate_player(target, "guessed by guard")
 
             elif played_card == PRIEST:
-                current_player.learn(target, target_player_state.hand, len(game_state.history))
+                if target is not None:
+                    current_player.learn(target, target_player_state.hand, len(game_state.history))
 
             elif played_card == BARON:
-                my_card = current_player_state.hand[0]
-                their_card = target_player_state.hand[0]
+                if target is not None:
+                    my_card = current_player_state.hand[0]
+                    their_card = target_player_state.hand[0]
 
-                if my_card != their_card:
-                    loser = target if my_card > their_card else current_player_idx
-                    game_state.eliminate_player(loser, "outranked in baron-off")
+                    if my_card != their_card:
+                        loser = target if my_card > their_card else current_player_idx
+                        game_state.eliminate_player(loser, "outranked in baron-off")
 
             elif played_card == HANDMAID:
                 current_player_state.handmaided = True
@@ -291,9 +353,10 @@ def play_game():
                     game_state.deal_card(target)
 
             elif played_card == KING:
-                my_card = current_player_state.hand.pop()
-                current_player_state.hand.append(target_player_state.hand.pop())
-                target_player_state.hand.append(my_card)
+                if target is not None:
+                    my_card = current_player_state.hand.pop()
+                    current_player_state.hand.append(target_player_state.hand.pop())
+                    target_player_state.hand.append(my_card)
 
             elif played_card == COUNTESS:
                 pass
@@ -303,7 +366,6 @@ def play_game():
 
         # update history
         game_state.history.append(game_state.turn_record)
-        game_state.turn_record = None
 
         # check for winner
         winner = game_state.get_winner()
