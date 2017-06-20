@@ -183,6 +183,16 @@ class PublicGameState(object):
         self.history = [copy(record) for record in game_state.history]
         self.current_player_idx = game_state.current_player_idx
 
+    def __str__(self):
+        players = "\r\n".join([player.short_description() for player in self.player_states])
+        return """
+GAME STATE:
+%s
+cards remaining: %d,
+current player idx: %d,
+history: %r
+        """ % (players, self.cards_remaining, self.current_player_idx, self.history)
+
 
 class PlayerState(object):
     def __init__(self, idx, player):
@@ -190,7 +200,7 @@ class PlayerState(object):
         self.name = player.name
         self.graveyard = []
         self.is_alive = True
-        self.affection_tokens = 0
+        self.affection = 0
         self.hand = []
         self.handmaided = False
 
@@ -200,9 +210,9 @@ P%d %s
 hand: %r
 is_alive: %r
 handmaided: %r
-affection: %d
 graveyard: %r
-        """ % (self.my_idx, self.name, self.hand, self.is_alive, self. handmaided, self.affection_tokens, self.graveyard)
+affection: %d
+        """ % (self.my_idx, self.name, self.hand, self.is_alive, self.handmaided, self.graveyard, self.affection)
 
     def short_description(self):
         alive = "alive" if self.is_alive else "dead"
@@ -212,10 +222,25 @@ graveyard: %r
 
 class PublicPlayerState(object):
     def __init__(self, player_state):
+        self.player_idx = player_state.my_idx
         self.graveyard = player_state.graveyard
         self.is_alive = player_state.is_alive
-        self.affection_tokens = player_state.affection_tokens
+        self.affection = player_state.affection
         self.handmaided = player_state.handmaided
+
+    def __str__(self):
+        return """
+P%d
+is_alive: %r
+handmaided: %r
+graveyard: %r
+affection: %d
+        """ % (self.player_idx, self.is_alive, self.handmaided, self.graveyard, self.affection)
+
+    def short_description(self):
+        alive = "alive" if self.is_alive else "dead"
+        handmaided = ", handmaided" if self.handmaided else ""
+        return "P%d: %s%s" % (self.player_idx, alive, handmaided)
 
 
 PLAYERS = [IdiotBot(idx) for idx in xrange(4)]
