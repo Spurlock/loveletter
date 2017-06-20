@@ -24,19 +24,12 @@ loop until game winner:
     compute move results, update game_state and game_history
 """
 
-from random import shuffle, randint
+from random import shuffle
 from copy import copy
 import sys
 
-GUARD = 1
-PRIEST = 2
-BARON = 3
-HANDMAID = 4
-PRINCE = 5
-KING = 6
-COUNTESS = 7
-PRINCESS = 8
-SUICIDE = 9
+from bots.IdiotBot import IdiotBot
+from common import GUARD, PRIEST, BARON, HANDMAID, PRINCE, KING, COUNTESS, PRINCESS, SUICIDE
 
 FULL_DECK = [
     1, 1, 1, 1, 1,
@@ -46,16 +39,6 @@ FULL_DECK = [
     5, 5,
     6, 7, 8
 ]
-
-class Player(object):
-    def __init__(self, my_idx):
-        pass
-
-    def play_turn(self, player_hand, public_game_state, game_history):
-        pass
-
-    def learn(self, player_idx, hand, turn_idx):
-        pass
 
 
 class GameState(object):
@@ -233,35 +216,6 @@ class PublicPlayerState(object):
         self.affection_tokens = player_state.affection_tokens
         self.handmaided = player_state.handmaided
 
-
-class IdiotBot(Player):
-    def __init__(self, my_idx):
-        Player.__init__(self, my_idx)
-        self.my_idx = my_idx
-
-    def play_turn(self, player_hand, public_game_state):
-        card = min(player_hand)
-        target = None
-        guess = None
-
-        if card in [PRIEST, BARON, PRINCE, KING, GUARD]:
-            for p_idx, player_state in enumerate(public_game_state.player_states):
-                if p_idx != self.my_idx and player_state.is_alive and not player_state.handmaided:
-                    target = p_idx
-                    break
-            
-        if card == GUARD:
-            guess = randint(2, 8)
-
-        return {
-            'card': card,
-            'target_player': target,
-            'guess': guess
-        }
-
-
-    def learn(self, player_idx, hand, turn_idx):
-        pass
 
 PLAYERS = [IdiotBot(idx) for idx in xrange(4)]
 
