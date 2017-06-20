@@ -5,6 +5,7 @@ class IdiotBot(Player):
     def __init__(self, my_idx):
         Player.__init__(self, my_idx)
         self.my_idx = my_idx
+        self.name = "Idiot"
 
     def play_turn(self, player_hand, public_game_state):
         card = min(player_hand)

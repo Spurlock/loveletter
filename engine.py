@@ -44,8 +44,8 @@ FULL_DECK = [
 class GameState(object):
     def __init__(self, players):
         player_states = []
-        for player_idx, _ in enumerate(players):
-            player_states.append(PlayerState(player_idx))
+        for player_idx, player in enumerate(players):
+            player_states.append(PlayerState(player_idx, player))
 
         game_deck = [card for card in FULL_DECK]
         shuffle(game_deck)
@@ -185,8 +185,9 @@ class PublicGameState(object):
 
 
 class PlayerState(object):
-    def __init__(self, idx):
+    def __init__(self, idx, player):
         self.my_idx = idx
+        self.name = player.name
         self.graveyard = []
         self.is_alive = True
         self.affection_tokens = 0
@@ -195,18 +196,18 @@ class PlayerState(object):
 
     def __str__(self):
         return """
-PLAYER %d
+P%d %s
 hand: %r
 is_alive: %r
 handmaided: %r
 affection: %d
 graveyard: %r
-        """ % (self.my_idx, self.hand, self.is_alive, self. handmaided, self.affection_tokens, self.graveyard)
+        """ % (self.my_idx, self.name, self.hand, self.is_alive, self. handmaided, self.affection_tokens, self.graveyard)
 
     def short_description(self):
         alive = "alive" if self.is_alive else "dead"
         handmaided = "handmaided, " if self.handmaided else ""
-        return "P%d: %s, %s%r" % (self.my_idx, alive, handmaided, self.hand)
+        return "P%d (%s): %s, %s%r" % (self.my_idx, self.name, alive, handmaided, self.hand)
 
 
 class PublicPlayerState(object):
