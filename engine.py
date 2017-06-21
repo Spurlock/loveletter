@@ -33,7 +33,7 @@ from copy import copy
 import sys
 
 from bots.IdiotBot import IdiotBot
-from common import FULL_DECK, get_card_name, GUARD, PRIEST, BARON, HANDMAID, PRINCE, KING, COUNTESS, PRINCESS, SUICIDE
+from common import full_deck, get_card_name, GUARD, PRIEST, BARON, HANDMAID, PRINCE, KING, COUNTESS, PRINCESS, SUICIDE
 
 
 class GameState(object):
@@ -42,7 +42,7 @@ class GameState(object):
         for player_idx, player in enumerate(players):
             player_states.append(PlayerState(player_idx, player, affections[player_idx]))
 
-        game_deck = [card for card in FULL_DECK]
+        game_deck = [card for card in full_deck()]
         shuffle(game_deck)
         self.deck = game_deck
 
