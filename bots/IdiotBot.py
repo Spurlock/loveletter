@@ -1,6 +1,7 @@
 from common import Player, GUARD, PRIEST, BARON, HANDMAID, PRINCE, KING, COUNTESS, PRINCESS
 from random import randint
 
+
 class IdiotBot(Player):
     def __init__(self, my_idx):
         Player.__init__(self, my_idx)
@@ -12,7 +13,16 @@ class IdiotBot(Player):
         target = None
         guess = None
 
-        if card in [PRIEST, BARON, PRINCE, KING, GUARD]:
+        if COUNTESS in player_hand:
+            card = COUNTESS
+
+        if card == PRINCE:
+            for p_idx, player_state in enumerate(public_game_state.player_states):
+                if player_state.is_alive and not player_state.handmaided:
+                    target = p_idx
+                    break
+
+        if card in [PRIEST, BARON, KING, GUARD]:
             for p_idx, player_state in enumerate(public_game_state.player_states):
                 if p_idx != self.my_idx and player_state.is_alive and not player_state.handmaided:
                     target = p_idx
@@ -26,7 +36,6 @@ class IdiotBot(Player):
             'target_player': target,
             'guess': guess
         }
-
 
     def learn(self, player_idx, hand, turn_idx):
         pass

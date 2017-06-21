@@ -28,12 +28,12 @@ loop until game winner:
     compute move results, update game_state and game_history
 """
 
-from random import shuffle
+from random import shuffle, randint
 from copy import copy
 import sys
 
 from bots.IdiotBot import IdiotBot
-from common import GUARD, PRIEST, BARON, HANDMAID, PRINCE, KING, COUNTESS, PRINCESS, SUICIDE
+from common import get_card_name, GUARD, PRIEST, BARON, HANDMAID, PRINCE, KING, COUNTESS, PRINCESS, SUICIDE
 
 FULL_DECK = [
     1, 1, 1, 1, 1,
@@ -62,12 +62,11 @@ class GameState(object):
 
     def __str__(self):
         players = "\r\n".join([player.short_description() for player in self.player_states])
-        return """
-GAME STATE:
+        return """GAME STATE:
 %s
 deck: %r,
 current player idx: %d
-        """ % (players, self.deck, self.current_player_idx)
+""" % (players, self.deck, self.current_player_idx)
 
     def deal_card(self, player_idx):
         card = self.deck.pop(0)
@@ -82,6 +81,7 @@ current player idx: %d
         print "Eliminating player %d" % player_idx
         if reason:
             print "Reason: %s" % reason
+        print
         self.turn_record['eliminated_player'] = player_idx
 
         player_state = self.player_states[player_idx]
@@ -123,6 +123,9 @@ current player idx: %d
         return available_targets
 
     def sanitize_action(self, player_action):
+        if 'card' not in player_action:
+            player_action['card'] = None
+
         played_card = player_action['card']
         target = player_action.get('target_player')
 
@@ -142,12 +145,14 @@ current player idx: %d
 
         def target_is_valid():
             available_targets = self.get_available_targets()
-            if not isinstance(target, int):
-                return False
-            if len(available_targets) > 0 and target not in available_targets:
+            if len(available_targets) > 0:
+                if target not in available_targets:
+                    return False
+            elif not isinstance(target, int) and target is not None:
                 return False
             if target == self.current_player_idx:
                 return False
+
             return True
 
         current_player_state = self.player_states[self.current_player_idx]
@@ -168,7 +173,7 @@ current player idx: %d
 
         elif played_card in [PRIEST, BARON, KING]:
             if not target_is_valid():
-                return "invalid baron target"
+                return "invalid target"
 
         elif played_card == PRINCE:
             if not target_is_valid() and target != self.current_player_idx:
@@ -247,9 +252,27 @@ affection: %d
         handmaided = ", handmaided" if self.handmaided else ""
         return "P%d: %s%s" % (self.player_idx, alive, handmaided)
 
-def play_round(affections):
+
+def describe_action(action, player_idx):
+    targeting = ""
+    guessing = ""
+
+    if action.get('target_player') is not None:
+        targeting = " Target: P%d." % action['target_player']
+    if action.get('guess') is not None:
+        guessing = " Guess: %s." % get_card_name(action['guess'])
+
+    return "ACTION: P%d plays %s.%s%s" % (player_idx, get_card_name(action['card']), targeting, guessing)
+
+
+def play_round(affections, starting_player=None):
+
+    if starting_player is None:
+        starting_player = randint(0, len(PLAYERS) - 1)
+    starting_player -= 1  # it's gonna be incremented anyway
 
     print "BEGINNING ROUND"
+    print
 
     game_state = GameState(PLAYERS, affections)
     for player_idx, _ in enumerate(PLAYERS):
@@ -277,8 +300,7 @@ def play_round(affections):
 
         player_action = current_player.play_turn(current_player_state.hand, public_game_state)
         player_action = game_state.sanitize_action(player_action)
-        print
-        print "ACTION: %r" % player_action
+        print describe_action(player_action, current_player_idx)
         print
         action_error = game_state.get_action_error(player_action)
 
@@ -354,14 +376,18 @@ def play_round(affections):
         # check for winner
         winner = game_state.get_winner()
 
+    print "Round over. Winner: Player %d" % winner
+    print
     return winner
 
 
 def play_game():
     print "BEGINING GAME"
+    print
     affections = [0 for _ in PLAYERS]
+    winner = None
     while max(affections) < 4:
-        winner = play_round(affections)
+        winner = play_round(affections, winner)
         affections[winner] += 1
 
     print "END OF GAME"
@@ -382,7 +408,6 @@ def play_match(num_games):
 PLAYERS = [IdiotBot(idx) for idx in xrange(4)]
 match_results = play_match(10)
 
-print
 print "END OF MATCH"
 print "Games won:"
 print match_results
