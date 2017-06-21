@@ -1,6 +1,10 @@
 """
 NOTES AND DEFINITIONS
 
+round: each time an affection token is given, one round has ended
+game: each time a player reaches 4 affection tokens, one game has ended
+match: a set of games, ending at a given number of wins
+
 deck = [CARD_RANK, CARD_RANK, ..., CARD_RANK] # burner is not separate, is just the last card
 
 player_action = {
@@ -42,10 +46,10 @@ FULL_DECK = [
 
 
 class GameState(object):
-    def __init__(self, players):
+    def __init__(self, players, affections):
         player_states = []
         for player_idx, player in enumerate(players):
-            player_states.append(PlayerState(player_idx, player))
+            player_states.append(PlayerState(player_idx, player, affections[player_idx]))
 
         game_deck = [card for card in FULL_DECK]
         shuffle(game_deck)
@@ -128,7 +132,7 @@ current player idx: %d
             player_action['guess'] = None
         if target is not None:
             if played_card not in [GUARD, PRIEST, BARON, PRINCE, KING]:
-                target = None
+                player_action['target_player'] = None
         if len(available_targets) == 0 and played_card != PRINCE:
             player_action['target_player'] = None
 
@@ -138,7 +142,7 @@ current player idx: %d
 
         def target_is_valid():
             available_targets = self.get_available_targets()
-            if target is not None and not isinstance(target, int):
+            if not isinstance(target, int):
                 return False
             if len(available_targets) > 0 and target not in available_targets:
                 return False
@@ -195,12 +199,12 @@ history: %r
 
 
 class PlayerState(object):
-    def __init__(self, idx, player):
+    def __init__(self, idx, player, affection):
         self.my_idx = idx
         self.name = player.name
         self.graveyard = []
         self.is_alive = True
-        self.affection = 0
+        self.affection = affection
         self.hand = []
         self.handmaided = False
 
@@ -217,7 +221,8 @@ affection: %d
     def short_description(self):
         alive = "alive" if self.is_alive else "dead"
         handmaided = "handmaided, " if self.handmaided else ""
-        return "P%d (%s): %s, %s%r" % (self.my_idx, self.name, alive, handmaided, self.hand)
+        affection = "<3" * self.affection
+        return "P%d (%s): %s, %s%r %s" % (self.my_idx, self.name, alive, handmaided, self.hand, affection)
 
 
 class PublicPlayerState(object):
@@ -242,19 +247,18 @@ affection: %d
         handmaided = ", handmaided" if self.handmaided else ""
         return "P%d: %s%s" % (self.player_idx, alive, handmaided)
 
+def play_round(affections):
 
-PLAYERS = [IdiotBot(idx) for idx in xrange(4)]
+    print "BEGINNING ROUND"
 
-def play_game():
-
-    game_state = GameState(PLAYERS)
+    game_state = GameState(PLAYERS, affections)
     for player_idx, _ in enumerate(PLAYERS):
         game_state.deal_card(player_idx)
 
     winner = None
 
     # play a round
-    while winner is None and len(game_state.deck) > 0:
+    while winner is None:
 
         # whose turn is it?
         game_state.advance_current_player()
@@ -350,5 +354,35 @@ def play_game():
         # check for winner
         winner = game_state.get_winner()
 
-play_game()
+    return winner
 
+
+def play_game():
+    print "BEGINING GAME"
+    affections = [0 for _ in PLAYERS]
+    while max(affections) < 4:
+        winner = play_round(affections)
+        affections[winner] += 1
+
+    print "END OF GAME"
+    print "Final affection scores:"
+    print affections
+    return affections.index(4)
+
+
+def play_match(num_games):
+    wins = [0 for _ in PLAYERS]
+    for _ in xrange(num_games):
+        winner = play_game()
+        wins[winner] += 1
+
+    return wins
+
+
+PLAYERS = [IdiotBot(idx) for idx in xrange(4)]
+match_results = play_match(10)
+
+print
+print "END OF MATCH"
+print "Games won:"
+print match_results
