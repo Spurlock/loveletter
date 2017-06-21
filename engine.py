@@ -33,16 +33,7 @@ from copy import copy
 import sys
 
 from bots.IdiotBot import IdiotBot
-from common import get_card_name, GUARD, PRIEST, BARON, HANDMAID, PRINCE, KING, COUNTESS, PRINCESS, SUICIDE
-
-FULL_DECK = [
-    1, 1, 1, 1, 1,
-    2, 2,
-    3, 3,
-    4, 4,
-    5, 5,
-    6, 7, 8
-]
+from common import FULL_DECK, get_card_name, GUARD, PRIEST, BARON, HANDMAID, PRINCE, KING, COUNTESS, PRINCESS, SUICIDE
 
 
 class GameState(object):
