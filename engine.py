@@ -21,11 +21,6 @@ game_history = [
   }
 ]
 
-loop until game winner:
-  loop until round winner:
-    update current_player
-    move = current_player.play(player_hand, public_game_state)
-    compute move results, update game_state and game_history
 """
 
 from random import shuffle, randint
@@ -135,7 +130,6 @@ current player idx: %d
     def get_action_error(self, player_action):
 
         def target_is_valid():
-            available_targets = self.get_available_targets()
             if len(available_targets) > 0:
                 if target not in available_targets:
                     return False
@@ -151,6 +145,7 @@ current player idx: %d
         played_card = player_action['card']
         target = player_action.get('target_player')
         guess = player_action.get('guess')
+        available_targets = self.get_available_targets()
 
         # is choice of card valid?
         if played_card not in current_player_state.hand:
@@ -159,7 +154,7 @@ current player idx: %d
         if played_card == GUARD:
             if not target_is_valid():
                 return "invalid guard target"
-            if not isinstance(guess, int) or guess < 2 or guess > 8:
+            if len(available_targets) > 0 and (not isinstance(guess, int) or guess < 2 or guess > 8):
                 return "invalid guard guess"
 
         elif played_card in [PRIEST, BARON, KING]:
