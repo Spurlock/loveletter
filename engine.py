@@ -2,7 +2,7 @@
 NOTES AND DEFINITIONS
 
 round: each time an affection token is given, one round has ended
-game: each time a player reaches 4 affection tokens, one game has ended
+game: each time a player reaches AFFECTION_GOAL, one game has ended
 match: a set of games, ending at a given number of wins
 
 deck = [CARD_RANK, CARD_RANK, ..., CARD_RANK] # burner is not separate, is just the last card
@@ -28,7 +28,9 @@ from copy import copy
 import sys
 
 from bots.IdiotBot import IdiotBot
-from common import full_deck, get_card_name, GUARD, PRIEST, BARON, HANDMAID, PRINCE, KING, COUNTESS, PRINCESS, SUICIDE
+from common import (full_deck, get_card_name,
+                    GUARD, PRIEST, BARON, HANDMAID, PRINCE, KING, COUNTESS, PRINCESS, SUICIDE,
+                    AFFECTION_GOAL)
 
 
 class GameState(object):
@@ -372,14 +374,14 @@ def play_game():
     print
     affections = [0 for _ in PLAYERS]
     winner = None
-    while max(affections) < 4:
+    while max(affections) < AFFECTION_GOAL:
         winner = play_round(affections, winner)
         affections[winner] += 1
 
     print "END OF GAME"
     print "Final affection scores:"
     print affections
-    return affections.index(4)
+    return affections.index(AFFECTION_GOAL)
 
 
 def play_match(num_games):

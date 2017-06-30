@@ -25,6 +25,8 @@ COUNTESS = 7
 PRINCESS = 8
 SUICIDE = 9
 
+AFFECTION_GOAL = 4
+
 
 def full_deck():
     return [
