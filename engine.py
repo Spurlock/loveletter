@@ -30,7 +30,7 @@ import sys
 from bots.IdiotBot import IdiotBot
 from common import (full_deck, get_card_name,
                     GUARD, PRIEST, BARON, HANDMAID, PRINCE, KING, COUNTESS, PRINCESS, SUICIDE,
-                    AFFECTION_GOAL)
+                    AFFECTION_GOAL, mprint)
 
 
 class GameState(object):
@@ -66,10 +66,10 @@ current player idx: %d
             self.current_player_idx = (self.current_player_idx + 1) % len(PLAYERS)
 
     def eliminate_player(self, player_idx, reason=None):
-        print "Eliminating player %d" % player_idx
+        mprint("Eliminating player %d" % player_idx, 4)
         if reason:
-            print "Reason: %s" % reason
-        print
+            mprint("Reason: %s" % reason, 4)
+        mprint(lvl=4)
         self.turn_record['eliminated_player'] = player_idx
 
         player_state = self.player_states[player_idx]
@@ -81,15 +81,15 @@ current player idx: %d
         remaining_players = [idx for idx, player_state in enumerate(self.player_states) if player_state.is_alive]
         if len(remaining_players) == 0:
             sys.exit("Everyone was eliminated. This is not supposed to happen.")
-        
+
         elif len(remaining_players) == 1:
             return remaining_players[0]
-        
+
         elif len(self.deck) < 2:
             player_states = {player_idx: self.player_states[player_idx] for player_idx in remaining_players}
             high_card = max([player_state.hand[0] for _, player_state in player_states.iteritems()])
             top_players = [player_idx for player_idx, player_state in player_states.iteritems() if player_state.hand[0] == high_card]
-        
+
             if len(top_players) == 1:
                 return top_players[0]
             else:
@@ -259,8 +259,8 @@ def play_round(affections, starting_player=None):
         starting_player = randint(0, len(PLAYERS) - 1)
     starting_player -= 1  # it's gonna be incremented anyway
 
-    print "BEGINNING ROUND"
-    print
+    mprint("BEGINNING ROUND", 4)
+    mprint(lvl=4)
 
     game_state = GameState(PLAYERS, affections)
     for player_idx, _ in enumerate(PLAYERS):
@@ -284,12 +284,12 @@ def play_round(affections, starting_player=None):
         game_state.deal_card(current_player_idx)
         public_game_state = PublicGameState(game_state)
 
-        print game_state
+        mprint(game_state, 4)
 
         player_action = current_player.play_turn(current_player_state.hand, public_game_state)
         player_action = game_state.sanitize_action(player_action)
-        print describe_action(player_action, current_player_idx)
-        print
+        mprint(describe_action(player_action, current_player_idx), 5)
+        mprint(lvl=5)
         action_error = game_state.get_action_error(player_action)
 
         if action_error is not None:
@@ -364,23 +364,25 @@ def play_round(affections, starting_player=None):
         # check for winner
         winner = game_state.get_winner()
 
-    print "Round over. Winner: Player %d" % winner
-    print
+    mprint("Round over. Winner: Player %d" % winner, 3)
+    mprint(lvl=3)
     return winner
 
 
 def play_game():
-    print "BEGINING GAME"
-    print
+    mprint("BEGINING GAME", 2)
+    mprint(lvl=2)
+    for p in PLAYERS:
+        p.reset()
     affections = [0 for _ in PLAYERS]
     winner = None
     while max(affections) < AFFECTION_GOAL:
         winner = play_round(affections, winner)
         affections[winner] += 1
 
-    print "END OF GAME"
-    print "Final affection scores:"
-    print affections
+    mprint("END OF GAME", 2)
+    mprint("Final affection scores:", 2)
+    mprint(affections, 2)
     return affections.index(AFFECTION_GOAL)
 
 
@@ -396,6 +398,6 @@ def play_match(num_games):
 PLAYERS = [IdiotBot(idx) for idx in xrange(4)]
 match_results = play_match(10)
 
-print "END OF MATCH"
-print "Games won:"
-print match_results
+mprint("END OF MATCH", 1)
+mprint("Games won:", 1)
+mprint(match_results, 1)

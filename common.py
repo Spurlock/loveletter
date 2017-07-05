@@ -15,6 +15,13 @@ def get_card_name(card_rank):
     names = ["Guard", "Priest", "Baron", "Handmaid", "Prince", "King", "Countess", "Princess", "Suicide"]
     return names[card_rank - 1]
 
+
+def mprint(stuff=None, lvl=5):
+    if lvl <= PRINT_LEVEL:
+        if stuff is None:
+            stuff = ""
+        print stuff
+
 GUARD = 1
 PRIEST = 2
 BARON = 3
@@ -26,6 +33,8 @@ PRINCESS = 8
 SUICIDE = 9
 
 AFFECTION_GOAL = 4
+
+PRINT_LEVEL = 2
 
 
 def full_deck():

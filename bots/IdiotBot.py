@@ -8,6 +8,9 @@ class IdiotBot(Player):
         self.my_idx = my_idx
         self.name = "Idiot"
 
+    def reset(self):
+        pass
+
     def get_available_targets(self, player_states):
         available_targets = []
         for idx, p_state in enumerate(player_states):
