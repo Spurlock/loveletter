@@ -34,6 +34,15 @@ SUICIDE = 9
 
 AFFECTION_GOAL = 4
 
+"""
+0	silence
+1	print match outcome
+2	game outcomes
+3	round outcomes
+4	major occurrences in round
+5	minor occurrences in round
+6	debugging minutiae
+"""
 PRINT_LEVEL = 2
 
 
