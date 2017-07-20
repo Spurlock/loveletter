@@ -3,10 +3,11 @@ from random import randint, choice
 
 
 class IdiotBot(Player):
+    name = "Idiot"
+
     def __init__(self, my_idx):
         Player.__init__(self, my_idx)
         self.my_idx = my_idx
-        self.name = "Idiot"
 
     def reset(self):
         pass

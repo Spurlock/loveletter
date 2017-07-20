@@ -25,9 +25,13 @@ game_history = [
 
 from random import shuffle, randint
 from copy import copy
+from itertools import permutations
 import sys
 
 from bots.IdiotBot import IdiotBot
+# from bots.MarkBot import MarkBot
+# from bots.BenBot1 import BenBot
+# from bots.BsonBot import BsonBot
 from common import (full_deck, get_card_name,
                     GUARD, PRIEST, BARON, HANDMAID, PRINCE, KING, COUNTESS, PRINCESS, SUICIDE,
                     AFFECTION_GOAL, mprint)
@@ -35,6 +39,7 @@ from common import (full_deck, get_card_name,
 
 class GameState(object):
     def __init__(self, players, affections):
+        self.players = players
         player_states = []
         for player_idx, player in enumerate(players):
             player_states.append(PlayerState(player_idx, player, affections[player_idx]))
@@ -49,21 +54,21 @@ class GameState(object):
         self.current_player_idx = -1  # TO DO: respect last winner
 
     def __str__(self):
-        players = "\r\n".join([player.short_description() for player in self.player_states])
+        player_descriptions = "\r\n".join([player.short_description() for player in self.player_states])
         return """GAME STATE:
 %s
 deck: %r,
 current player idx: %d
-""" % (players, self.deck, self.current_player_idx)
+""" % (player_descriptions, self.deck, self.current_player_idx)
 
     def deal_card(self, player_idx):
         card = self.deck.pop(0)
         self.player_states[player_idx].hand.append(card)
 
     def advance_current_player(self):
-        self.current_player_idx = (self.current_player_idx + 1) % len(PLAYERS)
+        self.current_player_idx = (self.current_player_idx + 1) % len(self.players)
         while not self.player_states[self.current_player_idx].is_alive:
-            self.current_player_idx = (self.current_player_idx + 1) % len(PLAYERS)
+            self.current_player_idx = (self.current_player_idx + 1) % len(self.players)
 
     def eliminate_player(self, player_idx, reason=None):
         mprint("Eliminating player %d" % player_idx, 4)
@@ -253,17 +258,17 @@ def describe_action(action, player_idx):
     return "ACTION: P%d plays %s.%s%s" % (player_idx, get_card_name(action['card']), targeting, guessing)
 
 
-def play_round(affections, starting_player=None):
+def play_round(players, affections, starting_player=None):
 
     if starting_player is None:
-        starting_player = randint(0, len(PLAYERS) - 1)
+        starting_player = randint(0, len(players) - 1)
     starting_player -= 1  # it's gonna be incremented anyway
 
     mprint("BEGINNING ROUND", 4)
     mprint(lvl=4)
 
-    game_state = GameState(PLAYERS, affections)
-    for player_idx, _ in enumerate(PLAYERS):
+    game_state = GameState(players, affections)
+    for player_idx, _ in enumerate(players):
         game_state.deal_card(player_idx)
 
     winner = None
@@ -274,7 +279,7 @@ def play_round(affections, starting_player=None):
         # whose turn is it?
         game_state.advance_current_player()
         current_player_idx = game_state.current_player_idx
-        current_player = PLAYERS[current_player_idx]
+        current_player = players[current_player_idx]
         current_player_state = game_state.player_states[current_player_idx]
 
         # every turn housekeeping
@@ -369,15 +374,15 @@ def play_round(affections, starting_player=None):
     return winner
 
 
-def play_game():
+def play_game(players):
     mprint("BEGINING GAME", 2)
     mprint(lvl=2)
-    for p in PLAYERS:
+    for p in players:
         p.reset()
-    affections = [0 for _ in PLAYERS]
+    affections = [0 for _ in players]
     winner = None
     while max(affections) < AFFECTION_GOAL:
-        winner = play_round(affections, winner)
+        winner = play_round(players, affections, winner)
         affections[winner] += 1
 
     mprint("END OF GAME", 2)
@@ -386,18 +391,35 @@ def play_game():
     return affections.index(AFFECTION_GOAL)
 
 
-def play_match(num_games):
-    wins = [0 for _ in PLAYERS]
+def play_match(players, num_games):
+    wins = [0 for _ in players]
     for _ in xrange(num_games):
-        winner = play_game()
+        winner = play_game(players)
         wins[winner] += 1
 
     return wins
 
 
-PLAYERS = [IdiotBot(idx) for idx in xrange(4)]
-match_results = play_match(10)
+def play_tournament(games_per_match):
+    player_match_wins = {cls_idx: 0 for cls_idx, _ in enumerate(PLAYER_CLASSES)}
+    for player_arrangement in permutations(range(len(PLAYER_CLASSES)), 4):
+        players = [PLAYER_CLASSES[cls_idx](position) for position, cls_idx in enumerate(player_arrangement)]
+        match_results = play_match(players, games_per_match)
 
-mprint("END OF MATCH", 1)
-mprint("Games won:", 1)
-mprint(match_results, 1)
+        mprint("END OF MATCH", 1)
+        mprint("Games won:", 1)
+        mprint(match_results, 1)
+
+        for match_idx, wins in enumerate(match_results):
+            player_match_wins[player_arrangement[match_idx]] += wins
+
+    return player_match_wins
+
+
+
+PLAYER_CLASSES = [IdiotBot, IdiotBot, IdiotBot, IdiotBot]
+tourney_results = play_tournament(games_per_match=5)
+
+mprint("END OF TOURNAMENT", 1)
+mprint("Results:", 1)
+mprint(tourney_results, 1)
